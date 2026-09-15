@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Matcher - Intelligent NLP Skill Gap & Similarity Analyzer</title>
+    <meta name="description" content="Score resume alignment with job descriptions using TF-IDF, Cosine Similarity, and spaCy entity extraction. Built for ATS optimization and tech interview prep.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="app-background">
+        <div class="bg-glow glow-1"></div>
+        <div class="bg-glow glow-2"></div>
+    </div>
+
+    <div class="container">
+        <!-- Header / Hero Section -->
+        <header class="app-header">
+            <div class="logo-group">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <path d="m9 15 2 2 4-4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1>Resume Matcher</h1>
+                    <p class="subtitle">Interpretable NLP Skill Gap Analysis & Vector Similarity Engine</p>
+                </div>
+            </div>
+            <div class="header-badges">
+                <span class="badge badge-prep" id="open-interview-guide">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    Interview Prep Guide
+                </span>
+                <span class="badge badge-tech">TF-IDF + Cosine Similarity</span>
+            </div>
+        </header>
+
+        <!-- Presets Toolbar -->
+        <section class="preset-section card-glass">
+            <div class="preset-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                1-Click Quick Demo Presets:
+            </div>
+            <div class="preset-buttons">
+                <button type="button" class="btn-preset" data-preset="fullstack">
+                    💻 Full-Stack Engineer vs JD
+                </button>
+                <button type="button" class="btn-preset" data-preset="datascientist">
+                    🤖 Data Scientist / ML Engineer vs JD
+                </button>
+                <button type="button" class="btn-secondary" id="clear-all-btn">
+                    🗑️ Clear Inputs
+                </button>
+            </div>
+        </section>
+
+        <!-- Dual Input Section -->
+        <main class="input-grid">
+            <!-- Resume Input Card -->
+            <div class="input-card card-glass" id="resume-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Resume Input
+                    </div>
+                    <div class="tab-group">
+                        <button class="tab-btn active" data-target="resume-paste">Paste Text</button>
+                        <button class="tab-btn" data-target="resume-upload">Upload File</button>
+                    </div>
+                </div>
+
+                <div class="tab-content active" id="resume-paste">
+                    <textarea id="resume-text" placeholder="Paste full resume text here (experience, skills, projects, tools)..."></textarea>
+                </div>
+
+                <div class="tab-content" id="resume-upload">
+                    <div class="file-drop-zone" id="resume-dropzone">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <p class="drop-title">Drag & drop your resume here</p>
+                        <p class="drop-sub">Supports PDF, TXT, DOCX (Max 16MB)</p>
+                        <input type="file" id="resume-file-input" accept=".pdf,.txt,.docx" hidden>
+                        <button class="btn-file-select" onclick="document.getElementById('resume-file-input').click()">Browse File</button>
+                        <div class="file-selected-name" id="resume-file-name"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Job Description Input Card -->
+            <div class="input-card card-glass" id="jd-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                        Job Description Input
+                    </div>
+                    <div class="tab-group">
+                        <button class="tab-btn active" data-target="jd-paste">Paste Text</button>
+                        <button class="tab-btn" data-target="jd-upload">Upload File</button>
+                    </div>
+                </div>
+
+                <div class="tab-content active" id="jd-paste">
+                    <textarea id="jd-text" placeholder="Paste targeted job description, role requirements, and key qualifications here..."></textarea>
+                </div>
+
+                <div class="tab-content" id="jd-upload">
+                    <div class="file-drop-zone" id="jd-dropzone">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <p class="drop-title">Drag & drop job description here</p>
+                        <p class="drop-sub">Supports PDF, TXT, DOCX (Max 16MB)</p>
+                        <input type="file" id="jd-file-input" accept=".pdf,.txt,.docx" hidden>
+                        <button class="btn-file-select" onclick="document.getElementById('jd-file-input').click()">Browse File</button>
+                        <div class="file-selected-name" id="jd-file-name"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Analyze Action Button -->
+        <div class="action-bar">
+            <button id="analyze-btn" class="btn-primary-glowing">
+                <span class="btn-text">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Analyze & Match Resume
+                </span>
+                <span class="spinner" id="analyze-spinner" hidden></span>
+            </button>
+        </div>
+
+        <!-- Results Section (Initially Hidden) -->
+        <section id="results-section" class="results-container" hidden>
+            <!-- Overall Match Gauge Banner -->
+            <div class="score-card card-glass">
+                <div class="gauge-wrapper">
+                    <svg class="gauge-svg" viewBox="0 0 120 120">
+                        <circle class="gauge-bg" cx="60" cy="60" r="50"></circle>
+                        <circle class="gauge-progress" id="gauge-circle" cx="60" cy="60" r="50" stroke-dasharray="314" stroke-dashoffset="314"></circle>
+                    </svg>
+                    <div class="gauge-text">
+                        <span class="gauge-value" id="overall-score-val">0%</span>
+                        <span class="gauge-label">Match Score</span>
+                    </div>
+                </div>
+
+                <div class="score-meta">
+                    <div class="tier-pill" id="match-tier-badge">Calculating...</div>
+                    <h3>Match Similarity Analysis</h3>
+                    <p class="score-desc" id="score-desc-text">
+                        Score computed using 60% TF-IDF Cosine Similarity matrix & 40% Exact Skill Taxonomy coverage.
+                    </p>
+                    
+                    <div class="sub-metrics-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">TF-IDF Vector Cosine Sim:</span>
+                            <span class="metric-val" id="val-tfidf">0%</span>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill" id="bar-tfidf"></div></div>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Keyword Skill Coverage:</span>
+                            <span class="metric-val" id="val-skill">0%</span>
+                            <div class="progress-bar-bg"><div class="progress-bar-fill" id="bar-skill"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Missing Skills & ATS Action Tips -->
+            <div class="results-grid">
+                <div class="results-card card-glass missing-card">
+                    <div class="card-header">
+                        <div class="card-title text-missing">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            Missing Skills & Gaps (<span id="missing-count">0</span>)
+                        </div>
+                        <button class="btn-small" id="copy-missing-btn">Copy Missing Skills</button>
+                    </div>
+                    <p class="card-subtitle">Terms present in the Job Description but absent from your Resume:</p>
+                    <div class="skills-flex" id="missing-skills-chips"></div>
+
+                    <div class="ats-box">
+                        <div class="ats-title">⚡ Actionable ATS Optimization Tips</div>
+                        <ul id="ats-recommendations-list" class="ats-list"></ul>
+                    </div>
+                </div>
+
+                <div class="results-card card-glass matched-card">
+                    <div class="card-header">
+                        <div class="card-title text-matched">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            Matched Keywords & Skills (<span id="matched-count">0</span>)
+                        </div>
+                    </div>
+                    <p class="card-subtitle">Skills successfully identified in both documents:</p>
+                    <div id="categorized-matched-container"></div>
+                </div>
+            </div>
+
+            <!-- TF-IDF Term Weights & Overlap Analysis -->
+            <div class="results-card card-glass">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        TF-IDF Feature Overlap & Contribution Table
+                    </div>
+                </div>
+                <p class="card-subtitle">Detailed breakdown of top n-grams and their mathematical weight contributions to Cosine Similarity:</p>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Term / Bigram</th>
+                                <th>Resume Weight (TF-IDF)</th>
+                                <th>JD Weight (TF-IDF)</th>
+                                <th>Cosine Product Contribution</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tfidf-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Interview Explanation Modal / Drawer -->
+    <div class="modal-backdrop" id="interview-modal" hidden>
+        <div class="modal-card card-glass">
+            <div class="modal-header">
+                <div class="card-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                    NLP Pipeline Interview Prep Guide
+                </div>
+                <button class="btn-close" id="close-modal-btn">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="guide-intro">
+                    <p>This guide breaks down every step of the NLP pipeline so you can comfortably explain your design choices in technical interviews (e.g. TCS Prime, product tech rounds).</p>
+                </div>
+
+                <div class="guide-section">
+                    <h3>1. Pipeline Architecture Steps</h3>
+                    <div class="step-card">
+                        <div class="step-num">Step 1</div>
+                        <div>
+                            <strong>Text Preprocessing & Tokenization:</strong> Converts text to lower case, preserves domain tokens (like C++, Node.js), strips stop-words, and removes formatting noise.
+                        </div>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">Step 2</div>
+                        <div>
+                            <strong>TF-IDF Vectorization:</strong>
+                            <div class="math-box">
+                                \(\text{TF}(t, d) = \frac{\text{count}(t, d)}{\text{total words in } d}\) &nbsp;|&nbsp; \(\text{IDF}(t) = \log\left(\frac{N}{\text{df}(t)}\right) + 1\)
+                            </div>
+                            Sublinear TF scaling (\(1 + \log(\text{tf})\)) prevents high-frequency terms from overwhelming score vectors.
+                        </div>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">Step 3</div>
+                        <div>
+                            <strong>Cosine Similarity Math:</strong>
+                            <div class="math-box">
+                                \(\text{Cosine Similarity}(\vec{A}, \vec{B}) = \frac{\vec{A} \cdot \vec{B}}{\|\vec{A}\| \|\vec{B}\|} = \frac{\sum A_i B_i}{\sqrt{\sum A_i^2} \sqrt{\sum B_i^2}}\)
+                            </div>
+                            Evaluates the angle between document vectors in high-dimensional feature space, making it length-invariant.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="guide-section">
+                    <h3>2. Key Interview Questions & Answers</h3>
+                    <div class="qa-item">
+                        <div class="qa-q">Q: Why did you choose TF-IDF + Cosine Similarity over BERT or Transformer embeddings?</div>
+                        <div class="qa-a">
+                            <strong>Answer:</strong> TF-IDF provides 100% deterministic interpretability. In ATS applications, candidates and recruiters need to see exactly which terms contributed to the match score. Transformers can introduce semantic hallucination (e.g. treating 'React' and 'Angular' as identical because both are frontend frameworks), whereas TF-IDF cleanly flags exact missing technical keywords. Furthermore, TF-IDF runs in sub-milliseconds without requiring expensive GPU compute.
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <div class="qa-q">Q: How do you handle words missing from the dictionary or different word forms?</div>
+                        <div class="qa-a">
+                            <strong>Answer:</strong> We combine TF-IDF with a rule-based and spaCy technical taxonomy extractor. Lemmatization and token normalization map inflected forms back to canonical roots, while n-gram range (1, 2) captures multi-word phrases like 'Machine Learning' or 'Spring Boot'.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MathJax for rendering LaTeX math formulas cleanly -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
