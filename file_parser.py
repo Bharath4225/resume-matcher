@@ -1,7 +1,18 @@
 import io
-import os
+import re
 import PyPDF2
 import docx
+
+def clean_extracted_text(text: str) -> str:
+    """Removes non-printable ASCII noise and normalizes newlines."""
+    if not text:
+        return ""
+    # Replace carriage returns and multiple newlines
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    text = re.sub(r'\n+', '\n', text)
+    # Strip null bytes & control chars
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
+    return text.strip()
 
 def extract_text_from_file(file_storage) -> str:
     """
@@ -11,21 +22,20 @@ def extract_text_from_file(file_storage) -> str:
     filename = file_storage.filename.lower()
     content_bytes = file_storage.read()
     
-    # Reset buffer position for safety
+    # Reset buffer position
     file_storage.seek(0)
     
     if filename.endswith(".pdf"):
-        return extract_text_from_pdf(content_bytes)
+        raw = extract_text_from_pdf(content_bytes)
     elif filename.endswith(".docx"):
-        return extract_text_from_docx(content_bytes)
-    elif filename.endswith(".txt"):
-        return extract_text_from_txt(content_bytes)
+        raw = extract_text_from_docx(content_bytes)
     else:
-        # Fallback: attempt UTF-8 decoding
-        return extract_text_from_txt(content_bytes)
+        raw = extract_text_from_txt(content_bytes)
+        
+    return clean_extracted_text(raw)
 
 def extract_text_from_txt(content_bytes: bytes) -> str:
-    """Decodes plain text with fallbacks for encodings."""
+    """Decodes plain text with encoding fallbacks."""
     for encoding in ['utf-8', 'latin-1', 'cp1252']:
         try:
             return content_bytes.decode(encoding)

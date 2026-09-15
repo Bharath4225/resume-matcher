@@ -23,4 +23,4 @@ print("Missing Skills:", result["skills_analysis"]["missing_skills"])
 print("Top Overlapping TF-IDF Contributor Terms:")
 for term in result["tfidf_details"]["overlapping_contributors"]:
     print(f"  - {term['term']}: contribution +{term['contribution']}")
-print("\n✅ NLP Pipeline Verification SUCCESS!")
+print("\n[OK] NLP Pipeline Verification SUCCESS!")

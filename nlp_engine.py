@@ -1,22 +1,20 @@
 """
-NLP Engine for Resume-Job Description Matcher
-==============================================
-This module provides an interpretable NLP analysis pipeline using:
-1. Text Cleaning & Normalization
-2. TF-IDF (Term Frequency-Inverse Document Frequency) Vectorization
-   - Primary: scikit-learn TfidfVectorizer
-   - Fallback: Pure Python Sublinear TF-IDF Engine
-3. Cosine Similarity Vector Scoring
-4. Categorized Tech Taxonomy & SpaCy/Regex Skill Extraction
-5. Skill Gap Identification & Actionable ATS Recommendations
-6. Structured Interview Prep Explanations (Math formulas & trade-off rationale)
+NLP Engine for Resume-Job Description Matcher (High-Precision Edition)
+=======================================================================
+This module provides a highly accurate, deterministic NLP analysis engine:
+1. Advanced Text Preprocessing & Tech Token Protection
+2. Enhanced Tech Taxonomy & Multi-Gram Phrase Skill Extractor
+3. Corporate Stop-Word Filtering & TF-IDF Vectorization
+4. Length-Normalized Cosine Similarity Computation
+5. Categorized Skill Gap Breakdown & ATS Recommendation Generator
+6. Math & Architectural Explanations for Interview Prep
 """
 
 import re
 import math
 from collections import Counter
 
-# Try importing scikit-learn, graceful fallback to pure python vectorizer if not installed
+# Try importing scikit-learn
 try:
     import numpy as np
     from sklearn.feature_extraction.text import TfidfVectorizer
@@ -25,7 +23,7 @@ try:
 except ImportError:
     SKLEARN_AVAILABLE = False
 
-# Try loading spaCy, provide graceful fallback if model is not installed
+# Try loading spaCy
 try:
     import spacy
     try:
@@ -39,42 +37,59 @@ except ImportError:
 SKILL_TAXONOMY = {
     "Programming Languages": [
         "python", "javascript", "typescript", "java", "c++", "c#", "go", "golang", "rust",
-        "ruby", "php", "swift", "kotlin", "r", "scala", "matlab", "perl", "bash", "shell", "sql", "html", "css"
+        "ruby", "php", "swift", "kotlin", "r", "scala", "matlab", "perl", "bash", "shell",
+        "sql", "html", "html5", "css", "css3", "dart", "elixir", "haskell", "assembly"
     ],
     "Frameworks & Libraries": [
-        "react", "react.js", "next.js", "vue", "vue.js", "angular", "node.js", "express", "express.js",
-        "django", "flask", "fastapi", "spring", "spring boot", "asp.net", "rails", "laravel",
-        "tensorflow", "pytorch", "keras", "scikit-learn", "sklearn", "spacy", "nltk", "opencv",
-        "pandas", "numpy", "matplotlib", "seaborn", "tailwind", "tailwindcss", "bootstrap"
+        "react", "react.js", "reactjs", "next.js", "nextjs", "vue", "vue.js", "vuejs", "angular", "angularjs",
+        "node.js", "nodejs", "express", "express.js", "expressjs", "django", "flask", "fastapi", "spring", "spring boot",
+        "asp.net", "rails", "ruby on rails", "laravel", "tensorflow", "pytorch", "keras", "scikit-learn",
+        "sklearn", "spacy", "nltk", "opencv", "pandas", "numpy", "matplotlib", "seaborn", "tailwind",
+        "tailwindcss", "bootstrap", "redux", "graphql", "apollo", "flutter", "react native", "electron"
     ],
     "Databases & Data Stores": [
         "postgresql", "postgres", "mysql", "mongodb", "sqlite", "redis", "elasticsearch",
-        "dynamodb", "cassandra", "oracle", "sql server", "neo4j", "snowflake", "bigquery"
+        "dynamodb", "cassandra", "oracle", "sql server", "mssql", "neo4j", "snowflake", "bigquery",
+        "mariadb", "firebase", "firestore", "cockroachdb", "clickhouse", "pinecone", "chromadb"
     ],
     "Cloud & DevOps": [
         "aws", "amazon web services", "azure", "gcp", "google cloud", "docker", "kubernetes", "k8s",
-        "terraform", "ansible", "jenkins", "github actions", "gitlab ci", "ci/cd", "nginx",
-        "linux", "unix", "bash", "cloudformation", "prometheus", "grafana"
+        "terraform", "ansible", "jenkins", "github actions", "gitlab ci", "ci/cd", "nginx", "apache",
+        "linux", "unix", "bash", "cloudformation", "prometheus", "grafana", "helm", "istio", "serverless",
+        "ec2", "s3", "lambda", "ecs", "eks", "cloudwatch", "route53"
     ],
     "AI, ML & Data Engineering": [
         "machine learning", "deep learning", "nlp", "natural language processing", "computer vision",
-        "data mining", "data pipelines", "spark", "pyspark", "hadoop", "kafka", "airflow",
-        "vector databases", "embeddings", "tf-idf", "llm", "rag", "transformers", "feature engineering"
+        "data mining", "data pipelines", "spark", "pyspark", "hadoop", "kafka", "airflow", "dbt",
+        "vector databases", "embeddings", "tf-idf", "llm", "rag", "transformers", "feature engineering",
+        "bert", "gpt", "langchain", "llamaIndex", "model deployment", "hyperparameter tuning"
     ],
     "Tools, Testing & Architecture": [
-        "git", "github", "gitlab", "jira", "postman", "rest api", "graphql", "microservices",
-        "system design", "unit testing", "pytest", "jest", "cypress", "agile", "scrum", "kanban",
-        "oop", "object-oriented programming", "design patterns"
+        "git", "github", "gitlab", "jira", "postman", "rest api", "restful api", "microservices",
+        "system design", "unit testing", "pytest", "jest", "cypress", "selenium", "mocha", "chai",
+        "agile", "scrum", "kanban", "oop", "object-oriented programming", "design patterns",
+        "solid principles", "tdd", "test-driven development", "web sockets", "grpc"
     ],
-    "Soft Skills & Management": [
+    "Soft Skills & Methodologies": [
         "problem solving", "leadership", "communication", "team collaboration", "critical thinking",
-        "time management", "project management", "stakeholder management", "analytical skills"
+        "time management", "project management", "stakeholder management", "analytical skills",
+        "cross-functional collaboration", "code review", "mentorship", "decision making"
     ]
 }
 
-# Standard English stop words fallback
-STOP_WORDS = set([
-    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't",
+# Corporate & JD Filler Words to Exclude from TF-IDF Feature Matrices
+FILLER_WORDS = set([
+    "candidate", "candidates", "requirement", "requirements", "responsibility", "responsibilities",
+    "qualification", "qualifications", "role", "roles", "position", "positions", "job", "jobs",
+    "description", "looking", "seeking", "ideal", "opportunity", "environment", "team", "teams",
+    "work", "working", "experience", "experiences", "years", "year", "ability", "proven", "track",
+    "record", "strong", "understanding", "knowledge", "expertise", "proficient", "proficiency",
+    "skill", "skills", "duty", "duties", "company", "organization", "client", "business",
+    "successful", "must", "have", "plus", "preferred", "minimum", "maximum", "etc"
+])
+
+STANDARD_STOP_WORDS = set([
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "arent",
     "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by",
     "can", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "for", "from",
     "further", "had", "has", "have", "having", "he", "her", "here", "hers", "herself", "him", "himself",
@@ -86,47 +101,67 @@ STOP_WORDS = set([
     "which", "while", "who", "whom", "why", "with", "would", "you", "your", "yours", "yourself", "yourselves"
 ])
 
+ALL_STOP_WORDS = set([re.sub(r'[^a-z0-9]', '', w) for w in STANDARD_STOP_WORDS.union(FILLER_WORDS) if w.strip()])
+
 def clean_text(text: str) -> str:
     """
-    Step 1: Text Preprocessing & Cleaning
-    -------------------------------------
-    Normalizes text by:
-    - Lowercasing to ensure case-insensitivity
-    - Preserving technical punctuation (e.g., C++, Node.js, Next.js)
-    - Removing non-alphanumeric noise
+    Step 1: Text Preprocessing & Token Protection
+    ---------------------------------------------
+    Normalizes text while preserving complex technical symbols and multi-word tech terms.
     """
     if not text:
         return ""
     
     text = text.lower()
-    text = re.sub(r'c\+\+', 'cpp_token', text)
-    text = re.sub(r'c\#', 'csharp_token', text)
-    text = re.sub(r'node\.js', 'nodejs_token', text)
-    text = re.sub(r'react\.js', 'reactjs_token', text)
-    text = re.sub(r'next\.js', 'nextjs_token', text)
-    text = re.sub(r'vue\.js', 'vuejs_token', text)
-    text = re.sub(r'express\.js', 'expressjs_token', text)
-    text = re.sub(r'\.net', 'dotnet_token', text)
 
+    # Protect specific technical tokens before stripping punctuation
+    token_map = {
+        r'c\+\+': 'cpp_token',
+        r'c\#': 'csharp_token',
+        r'node\.js': 'nodejs_token',
+        r'react\.js': 'reactjs_token',
+        r'next\.js': 'nextjs_token',
+        r'vue\.js': 'vuejs_token',
+        r'express\.js': 'expressjs_token',
+        r'\.net': 'dotnet_token',
+        r'ci/cd': 'cicd_token',
+        r'restful api': 'restfulapi_token',
+        r'rest api': 'restapi_token'
+    }
+
+    for pattern, replacement in token_map.items():
+        text = re.sub(pattern, replacement, text)
+
+    # Strip special punctuation except alphanumeric and underscore
     text = re.sub(r'[^a-z0-9_\s]', ' ', text)
-    
-    text = text.replace('cpp_token', 'c++')
-    text = text.replace('csharp_token', 'c#')
-    text = text.replace('nodejs_token', 'node.js')
-    text = text.replace('reactjs_token', 'react.js')
-    text = text.replace('nextjs_token', 'next.js')
-    text = text.replace('vuejs_token', 'vue.js')
-    text = text.replace('expressjs_token', 'express.js')
-    text = text.replace('dotnet_token', '.net')
+
+    # Restore protected tokens
+    reverse_map = {
+        'cpp_token': 'c++',
+        'csharp_token': 'c#',
+        'nodejs_token': 'node.js',
+        'reactjs_token': 'react.js',
+        'nextjs_token': 'next.js',
+        'vuejs_token': 'vue.js',
+        'expressjs_token': 'express.js',
+        'dotnet_token': '.net',
+        'cicd_token': 'ci/cd',
+        'restfulapi_token': 'restful api',
+        'restapi_token': 'rest api'
+    }
+
+    for token, word in reverse_map.items():
+        text = text.replace(token, word)
 
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
 def extract_skills(text: str) -> dict:
     """
-    Step 2: Keyword & Skill Extraction
-    -----------------------------------
-    Scans the text using taxonomy pattern matching and spaCy noun chunk analysis.
+    Step 2: Skill Extraction Engine
+    -------------------------------
+    Scans text against taxonomy with regex boundary matching, alias resolution,
+    and spaCy noun chunk identification.
     """
     clean = clean_text(text)
     lower_raw = text.lower()
@@ -135,26 +170,44 @@ def extract_skills(text: str) -> dict:
     categorized = {cat: [] for cat in SKILL_TAXONOMY}
     skill_counts = Counter()
 
+    # Alias mapping to canonical names (e.g., nodejs -> node.js, reactjs -> react.js)
+    alias_map = {
+        "nodejs": "node.js",
+        "reactjs": "react.js",
+        "vuejs": "vue.js",
+        "nextjs": "next.js",
+        "expressjs": "express.js",
+        "k8s": "kubernetes",
+        "postgres": "postgresql",
+        "sklearn": "scikit-learn",
+        "tailwindcss": "tailwind"
+    }
+
     for cat, skills_list in SKILL_TAXONOMY.items():
         for skill in skills_list:
             pattern = r'(?<![a-zA-Z0-9#+])' + re.escape(skill) + r'(?![a-zA-Z0-9#+])'
             matches = len(re.findall(pattern, lower_raw))
             if matches > 0:
-                found_skills.add(skill)
-                categorized[cat].append(skill)
-                skill_counts[skill] = matches
+                canonical_skill = alias_map.get(skill, skill)
+                found_skills.add(canonical_skill)
+                if canonical_skill not in categorized[cat]:
+                    categorized[cat].append(canonical_skill)
+                skill_counts[canonical_skill] += matches
 
+    # SpaCy Noun Chunk Analysis
     if nlp is not None and len(clean) > 0:
         try:
             doc = nlp(clean[:50000])
             for chunk in doc.noun_chunks:
                 phrase = chunk.text.strip().lower()
-                if len(phrase) > 3 and phrase not in STOP_WORDS:
+                if len(phrase) > 2 and phrase not in ALL_STOP_WORDS:
                     for cat, skills_list in SKILL_TAXONOMY.items():
-                        if phrase in skills_list and phrase not in found_skills:
-                            found_skills.add(phrase)
-                            categorized[cat].append(phrase)
-                            skill_counts[phrase] = 1
+                        if phrase in skills_list:
+                            canonical_skill = alias_map.get(phrase, phrase)
+                            found_skills.add(canonical_skill)
+                            if canonical_skill not in categorized[cat]:
+                                categorized[cat].append(canonical_skill)
+                            skill_counts[canonical_skill] += 1
         except Exception:
             pass
 
@@ -166,11 +219,10 @@ def extract_skills(text: str) -> dict:
 
 def pure_python_tfidf_similarity(doc1: str, doc2: str):
     """
-    Pure Python Sublinear TF-IDF + Cosine Similarity Engine
-    Used as an ultra-reliable, zero-dependency fallback.
+    Pure Python Sublinear TF-IDF Engine Fallback
     """
     def tokenize(t):
-        words = [w for w in t.split() if w not in STOP_WORDS and len(w) > 1]
+        words = [w for w in t.split() if w not in ALL_STOP_WORDS and len(w) > 1]
         bigrams = [f"{words[i]} {words[i+1]}" for i in range(len(words)-1)]
         return words + bigrams
 
@@ -184,18 +236,15 @@ def pure_python_tfidf_similarity(doc1: str, doc2: str):
     if not vocab:
         return 0.0, [], [], []
 
-    # Calculate IDF: log((N + 1) / (df + 1)) + 1
     N = 2
     idf = {}
     for term in vocab:
         df = (1 if term in tf1 else 0) + (1 if term in tf2 else 0)
         idf[term] = math.log((N + 1.0) / (df + 1.0)) + 1.0
 
-    # Sublinear TF scaling: 1 + log(tf) if tf > 0 else 0
     vec1 = {term: (1 + math.log(tf1[term])) * idf[term] for term in tf1}
     vec2 = {term: (1 + math.log(tf2[term])) * idf[term] for term in tf2}
 
-    # Dot product
     dot_product = sum(vec1.get(t, 0) * vec2.get(t, 0) for t in vocab)
     norm1 = math.sqrt(sum(v**2 for v in vec1.values()))
     norm2 = math.sqrt(sum(v**2 for v in vec2.values()))
@@ -205,7 +254,6 @@ def pure_python_tfidf_similarity(doc1: str, doc2: str):
     else:
         sim = (dot_product / (norm1 * norm2)) * 100.0
 
-    # Overlapping contributions
     overlapping = []
     for t in vocab:
         w1 = vec1.get(t, 0)
@@ -227,10 +275,8 @@ def pure_python_tfidf_similarity(doc1: str, doc2: str):
 
 def calculate_tfidf_similarity(resume_clean: str, jd_clean: str):
     """
-    Step 3: Vectorization & Similarity Math
-    ----------------------------------------
-    Calculates TF-IDF matrices and Cosine Similarity score.
-    Attempts scikit-learn first; falls back to pure Python implementation if sklearn is unavailable.
+    Step 3: High-Precision TF-IDF Vectorization & Cosine Distance
+    --------------------------------------------------------------
     """
     if not resume_clean.strip() or not jd_clean.strip():
         return 0.0, [], [], []
@@ -239,7 +285,7 @@ def calculate_tfidf_similarity(resume_clean: str, jd_clean: str):
         try:
             vectorizer = TfidfVectorizer(
                 ngram_range=(1, 2),
-                stop_words='english',
+                stop_words=list(ALL_STOP_WORDS),
                 sublinear_tf=True
             )
             corpus = [resume_clean, jd_clean]
@@ -278,25 +324,24 @@ def calculate_tfidf_similarity(resume_clean: str, jd_clean: str):
         except Exception:
             pass
 
-    # Pure Python Fallback
     return pure_python_tfidf_similarity(resume_clean, jd_clean)
 
 def generate_ats_recommendations(missing_skills: list, match_score: float) -> list:
-    """Generates practical actionable ATS tailoring tips based on gap analysis."""
+    """Generates precise, actionable ATS tailoring advice based on gap analysis."""
     recs = []
     if match_score >= 85:
-        recs.append("🎉 Excellent Match! Your resume covers almost all core requirements. Ensure your achievements include quantifiable metrics (e.g. 'Improved speed by 35%').")
+        recs.append("🎉 Excellent Match! Your resume covers almost all core requirements. Ensure your achievements include quantifiable metrics (e.g. 'Improved API response speed by 35%').")
     elif match_score >= 70:
-        recs.append("👍 Strong Match! You have a solid foundation for this role. Adding a few targeted missing keywords will push your ATS score into the top tier.")
+        recs.append("👍 Strong Match! You have a solid technical foundation for this role. Incorporating the missing keywords below into your Experience bullet points will push your ATS score into the top tier.")
     elif match_score >= 50:
-        recs.append("⚠️ Moderate Match. Several key skills requested in the JD are currently missing from your resume.")
+        recs.append("⚠️ Moderate Match. Several mandatory technical skills requested in the Job Description are currently missing from your resume.")
     else:
-        recs.append("❗ Low Similarity Match. Consider tailoring your resume significantly or adding relevant project experience matching this job profile.")
+        recs.append("❗ Low Similarity Match. Consider tailoring your resume significantly or emphasizing relevant project experience matching this job profile.")
 
     if missing_skills:
         top_missing = missing_skills[:5]
-        recs.append(f"💡 Key Missing Terms: We recommend highlighting experience with {', '.join(top_missing)} in your Skills or Project sections.")
-        recs.append("📌 Action Tip: Use action verbs paired with missing technical terms (e.g., 'Utilized PyTorch to develop NLP pipelines...').")
+        recs.append(f"💡 Key Missing Keywords to Add: We recommend including experience with {', '.join(top_missing)} in your Skills or Professional Experience sections.")
+        recs.append("📌 Actionable Example: Use strong action verbs combined with missing terms (e.g., 'Engineered microservices using Docker and PostgreSQL to handle 50k daily active users').")
 
     return recs
 
@@ -314,30 +359,36 @@ def analyze_resume_vs_jd(resume_text: str, jd_text: str) -> dict:
     jd_skill_set = set(jd_skills_info["all_skills"])
 
     matched_skills = sorted(list(resume_skill_set.intersection(jd_skill_set)))
-    missing_skills = sorted(list(jd_skill_set.difference(resume_skill_set)))
+    
+    # Sort missing skills by frequency in Job Description for maximum relevance
+    jd_counts = jd_skills_info["skill_counts"]
+    missing_skills_raw = list(jd_skill_set.difference(resume_skill_set))
+    missing_skills = sorted(missing_skills_raw, key=lambda s: jd_counts.get(s, 1), reverse=True)
+    
     extra_skills = sorted(list(resume_skill_set.difference(jd_skill_set)))
 
     skill_match_percentage = round((len(matched_skills) / len(jd_skill_set) * 100), 2) if jd_skill_set else 0.0
 
     tfidf_score, top_resume_terms, top_jd_terms, term_contributions = calculate_tfidf_similarity(resume_clean, jd_clean)
 
+    # Balanced Scoring Algorithm: 55% TF-IDF Semantic Overlap + 45% Skill Taxonomy Coverage
     if jd_skill_set:
-        final_score = round(0.6 * tfidf_score + 0.4 * skill_match_percentage, 1)
+        final_score = round(0.55 * tfidf_score + 0.45 * skill_match_percentage, 1)
     else:
         final_score = tfidf_score
 
     if final_score >= 85:
         match_tier = "Excellent Match"
-        tier_color = "#10b981"
+        tier_color = "#10b981" # Emerald
     elif final_score >= 70:
         match_tier = "Strong Match"
-        tier_color = "#06b6d4"
+        tier_color = "#06b6d4" # Cyan
     elif final_score >= 50:
         match_tier = "Moderate Match"
-        tier_color = "#f59e0b"
+        tier_color = "#f59e0b" # Amber
     else:
         match_tier = "Low Match"
-        tier_color = "#ef4444"
+        tier_color = "#ef4444" # Red
 
     categorized_matched = {}
     categorized_missing = {}
@@ -356,8 +407,8 @@ def analyze_resume_vs_jd(resume_text: str, jd_text: str) -> dict:
         "summary": "This NLP pipeline computes similarity using TF-IDF vectorization and Cosine Similarity, complemented by a rule-based & spaCy entity extraction engine.",
         "steps": [
             {
-                "step": "1. Text Preprocessing & Tokenization",
-                "details": "Converts raw text into lowercased tokens, preserves technical symbols (e.g. C++, Node.js), strips stop-words, and eliminates formatting noise."
+                "step": "1. Text Preprocessing & Token Protection",
+                "details": "Converts raw text into lowercased tokens, preserves technical symbols (e.g. C++, Node.js, REST API), strips corporate stop-words, and eliminates formatting noise."
             },
             {
                 "step": "2. TF-IDF Vectorization",
